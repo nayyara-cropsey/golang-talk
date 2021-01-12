@@ -3,94 +3,126 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/Pallinder/go-randomdata"
 	"math/rand"
 	"os"
+	"os/signal"
+	"runtime"
+	"sync"
+	"syscall"
 	"time"
 )
 
-type Log string
-
-type LogShipper interface {
-	Start(ctx context.Context) (chan<- Log, error)
-	Done() <-chan struct{}
-	Err() error
-}
-
-func NewLogShipper() LogShipper {
-	return &stdoutLogShipper{
-		done: make(chan struct{}),
-	}
-}
-
 func main() {
+	fmt.Println("OS\t\t", runtime.GOOS)
+	fmt.Println("Arch\t\t", runtime.GOARCH)
+	fmt.Println("CPUs\t\t", runtime.NumCPU())
+	fmt.Println("Max procs\t", runtime.GOMAXPROCS(runtime.NumCPU()))
+
+	//monitorCh := make(chan bool)
+	ch := make(chan string)
 	ctx, cancel := context.WithCancel(context.Background())
-	l := NewLogShipper()
-	logCh, err := l.Start(ctx)
-	if err != nil {
-		fmt.Println("error", err)
-		return
-	}
+	wg := &sync.WaitGroup{}
 
-	go func() {
-		for i := 0; i < 100000; i++ {
-			time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-			logCh <- "hello"
-		}
-		fmt.Println("I'm done")
-	}()
+	wg.Add(2)
+	go log("foo", ch, ctx, wg)
+	go log("bar", ch, ctx, wg)
 
-	time.Sleep(time.Second)
-	cancel()
-
-	<-l.Done()
-	if l.Err() != nil {
-		fmt.Println("error occurred:", l.Err())
-	}
-}
-
-type stdoutLogShipper struct {
-	done chan struct{}
-	err  error
-	file *os.File
-}
-
-func (s *stdoutLogShipper) Start(ctx context.Context) (chan<- Log, error) {
-	ch := make(chan Log)
-	file, err := os.Create("./test.txt")
-	if err != nil {
-		return nil, err
-	}
-
-	s.file = file
 	go func() {
 		for {
-			select {
-			case <-ctx.Done():
-				goto done
-			case data, ok := <-ch:
-				if !ok {
-					goto done
-				} else {
-					_, err := s.file.Write([]byte(fmt.Sprintf("%v\n", data)))
-					if err != nil {
-						fmt.Println("error", err)
-					}
-				}
-			}
+			ch <- randomdata.SillyName()
+			waitRand()
 		}
-
-	done:
-		s.err = s.file.Close()
-		close(s.done)
 	}()
 
-	return ch, nil
+	/*go func() {
+		for {
+			fmt.Println("Goroutines\t", runtime.NumGoroutine())
+			g := runtime.NumGoroutine()
+			if g == 2 {
+				monitorCh <- true
+			}
+			waitRand()
+		}
+	}()*/
+
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	doneCh := make(chan bool)
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
+
+	for {
+		select {
+		case <-quit:
+			cancel()
+		case <-doneCh:
+			fmt.Println("all loggers done")
+			return
+		}
+	}
+
+	//<-monitorCh
+
+	fmt.Println("exiting")
+	time.Sleep(time.Second)
 }
 
-func (s *stdoutLogShipper) Done() <-chan struct{} {
-	return s.done
+func log(name string, ch chan string, ctx context.Context, wg *sync.WaitGroup) {
+	file, err := os.Create(fmt.Sprintf("./%v.log", name))
+	if err != nil {
+		fmt.Println("file creation error: ", name, err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("exiting", name)
+			err := file.Close()
+			if err != nil {
+				fmt.Println("file closing error: ", name, err)
+			}
+			waitRandSec()
+			wg.Done()
+			fmt.Println("closed file", name)
+			return
+		case msg := <-ch:
+			_, err := file.Write([]byte(fmt.Sprintf("%v\n", msg)))
+			if err != nil {
+				fmt.Println("message sending error: ", name, err)
+			}
+		}
+	}
 }
 
-func (s *stdoutLogShipper) Err() error {
-	return s.err
+func fanOut(in chan string, ch1, ch2 chan string) {
+	for {
+		select {
+		case msg := <-in:
+			ch1 <- msg
+			ch2 <- msg
+		}
+	}
+}
+
+func fanIn(out chan string, ch1, ch2 chan string) {
+	for {
+		select {
+		case msg := <-ch1:
+			out <- msg
+		case msg := <-ch2:
+			out <- msg
+		}
+	}
+}
+
+func waitRand() {
+	time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+}
+
+func waitRandSec() {
+	time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
 }

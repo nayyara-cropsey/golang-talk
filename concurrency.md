@@ -5,16 +5,17 @@ paginate: true
 ---
 
 
-# Concurrency in Go Lang
+# GoLang Concurrency 101
  
 
 ---
 
 ## Concurrency 
 
-* Making progress on more than one task simultaneously is known as concurrency.
+* Making progress on more than one task simultaneously.
+* Composition of independently executing components.
 * Concurrency is especially important when designing systems (beyond simple tools).
-* Golang is a high-level programming language with high-level concurrency constructs.
+* Golang is a high-level programming language with high-level concurrency primitives.
 
 ---
 
@@ -60,12 +61,24 @@ paginate: true
 
 ## Concurrency vs Parallelism
 
-* Concurrency is a programming concept
-    * code designed to do multiple tasks and coordinate them 
+* Concurrency is a software design concept
+    * a way to structure software, so it interacts cleanly with the real world
 * Parallelism is an execution concept 
-    * a program with concurrent design utilizing multiple cores
+    * a program with concurrent design running tasks in parallel
 
-[![](images/code.png)](https://play.golang.org/p/3FS7RDIKaQ1)
+[![](images/code.png)](https://play.golang.org/p/YRFxwXSLpPb) [![](images/read.png)](https://rafalgolarz.com/blog/2018/07/21/what_are_goroutines)
+
+
+---
+
+## Concurrency
+
+![width:1200px](images/concurrency.png)
+
+---
+
+## Parallelism
+![width:1200px](images/parallelism.png)
 
 ---
 
@@ -95,8 +108,7 @@ go func() {
        // handle event 3 
     }
   }
-}
-
+}()
 ```
 
 ---
@@ -104,10 +116,10 @@ go func() {
 
 # Goroutines
 
-* Like threads conceptually
-* Can resource leaks if not terminated properly
+* Like threads conceptually - run independently
+* Can leaks resources if not terminated properly
 
-[![](images/code.png)](https://play.golang.org/p/th7SCxdbr4Q)
+[![](images/code.png)](https://play.golang.org/p/L8Ehlaz5b1r)
 
 ![](images/goroutines.png)
 
@@ -115,9 +127,39 @@ go func() {
 
 # Channels
 
-* Blocking (always!)
-* Synchronization construct
-* `select` with multiple channels
+
+* Communication
+* Blocking (send and receive)
+* Synchronization [*](https://play.golang.org/p/QWmjK6TNmND)
+* `select` with multiple channels [*](https://play.golang.org/p/ZNn2PdY_Xv2)
+
+![](images/channel.png)
+[![](images/code.png)](https://play.golang.org/p/7WU-Fsvr23m)
+
+---
+
+## Example 1
+
+![](images/multi_ch.png)
+
+
+---
+
+## Fan Out Pattern
+
+![](images/fan_out.png)
+
+---
+
+## Fan In Pattern
+
+![](images/fan_in.png)
+
+--- 
+
+## Example 2
+
+![](images/multi_ch_file.png)
 
 ---
 

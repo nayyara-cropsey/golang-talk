@@ -1,0 +1,15 @@
+"github.com/Pallinder/go-randomdata"
+randomdata.SillyName()
+
+// file open
+file, err := os.Create("./test.txt")
+_, err := file.Write([]byte(fmt.Sprintf("%v\n", data)))
+err := file.Close()
+
+
+// wait for interrupt signal to gracefully shutdown the server with a timeout
+quit := make(chan os.Signal)
+// kill (no param) default send syscall.SIGTERM
+// kill -2 is syscall.SIGINT
+// kill -9 is syscall.SIGKILL but can't be caught, so no need to add it
+signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
